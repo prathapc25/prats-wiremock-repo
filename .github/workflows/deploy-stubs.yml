@@ -1,0 +1,56 @@
+name: Deploy WireMock Stubs to Azure
+
+on:
+  push:
+    branches: [ main, master ]
+    paths:
+      - 'mappings/**'
+      - '__files/**'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Azure Login (OIDC)
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Upload stubs to Azure File Share
+        run: |
+          echo "Uploading mappings..."
+          az storage file upload-batch \
+            --account-name ${{ vars.STORAGE_ACCOUNT }} \
+            --source mappings \
+            --destination ${{ vars.SHARE_NAME }}/mappings \
+            --pattern "*.json"
+
+          echo "Uploading __files (if any)..."
+          if [ -d "__files" ]; then
+            az storage file upload-batch \
+              --account-name ${{ vars.STORAGE_ACCOUNT }} \
+              --source __files \
+              --destination ${{ vars.SHARE_NAME }}/ __files \
+              --pattern "*"
+          fi
+
+      - name: Reload WireMock mappings via Admin API
+        run: |
+          WIREMOCK_URL="https://${{ vars.WIREMOCK_FQDN }}"
+          
+          echo "Resetting mappings..."
+          curl -X POST "${WIREMOCK_URL}/__admin/mappings/reset" \
+            -H "Content-Type: application/json" \
+            --fail --silent --show-error
+          
+          echo "Mappings reloaded successfully!"
