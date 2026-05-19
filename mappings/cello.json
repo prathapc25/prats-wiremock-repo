@@ -1,0 +1,13 @@
+{
+  "request": {
+    "method": "GET",
+    "url": "/api/cello"
+  },
+  "response": {
+    "status": 200,
+    "body": "Hello Cello ",
+    "headers": {
+      "Content-Type": "text/plain"
+    }
+  }
+}
