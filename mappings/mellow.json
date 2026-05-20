@@ -1,0 +1,13 @@
+{
+  "request": {
+    "method": "GET",
+    "url": "/api/mellow"
+  },
+  "response": {
+    "status": 200,
+    "body": "Hello World from    Mellow",
+    "headers": {
+      "Content-Type": "text/plain"
+    }
+  }
+}
