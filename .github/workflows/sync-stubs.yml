@@ -1,4 +1,4 @@
-name: Sync WireMock Stubs to my AKS
+name: Sync WireMock Stubs to AKS
 
 on:
   push:
