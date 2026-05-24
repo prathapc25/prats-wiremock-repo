@@ -1,21 +1,47 @@
-name: Deploy WireMock Stub
+name: Deploy WireMock Stubs
 
 on:
   push:
     branches: [ main ]
-    paths:
-      - 'stubs/**'
+    paths: ['stubs/**']
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-
     steps:
-      - uses: actions/checkout@v4
+    - uses: actions/checkout@v4
 
-      - name: Deploy stub to WireMock
-        run: |
-          curl -X POST \
-            -H "Content-Type: application/json" \
-            --data @stubs/my-stub.json \
-            http://4.255.29.130/__admin/mappings
+    - name: Azure Login
+      uses: azure/login@v2
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}   # Use OIDC or Service Principal
+
+    - name: Upload Stubs to Azure Files
+      uses: azure/CLI@v2
+      with:
+        inlineScript: |
+          az storage directory create \
+            --account-name ${{ vars.STORAGE_ACCOUNT }} \
+            --account-key ${{ secrets.STORAGE_KEY }} \
+            --share-name ${{ vars.FILE_SHARE }} \
+            --name mappings || true
+
+          az storage directory create \
+            --account-name ${{ vars.STORAGE_ACCOUNT }} \
+            --account-key ${{ secrets.STORAGE_KEY }} \
+            --share-name ${{ vars.FILE_SHARE }} \
+            --name __files || true
+
+          # Upload mappings
+          az storage file upload-batch \
+            --account-name ${{ vars.STORAGE_ACCOUNT }} \
+            --account-key ${{ secrets.STORAGE_KEY }} \
+            --destination ${{ vars.FILE_SHARE }}/mappings \
+            --source ./stubs/mappings
+
+          # Upload __files (response bodies)
+          az storage file upload-batch \
+            --account-name ${{ vars.STORAGE_ACCOUNT }} \
+            --account-key ${{ secrets.STORAGE_KEY }} \
+            --destination ${{ vars.FILE_SHARE }}/__files \
+            --source ./stubs/__files
